@@ -103,4 +103,24 @@ class AuthServiceTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Credenciales inválidas");
     }
+
+    @Test
+    void login_deberíaLanzarExcepción_cuandoLaCuentaSeaSoloDeGoogle() {
+        LoginRequest loginRequest = new LoginRequest("jorge@example.com", "password123");
+
+        User googleOnlyUser = User.builder()
+                .id(2L)
+                .email("jorge@example.com")
+                .password(null) // registered via Google only, no own password
+                .name("Jorge")
+                .build();
+
+        when(userRepository.findByEmail("jorge@example.com")).thenReturn(Optional.of(googleOnlyUser));
+
+        assertThatThrownBy(() -> authService.login(loginRequest))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Google Sign-In");
+
+        verify(authenticationManager, never()).authenticate(any());
+    }
 }

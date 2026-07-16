@@ -23,7 +23,7 @@ public class AuthService {
 
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.email())) {
-            throw new IllegalArgumentException("Ya existe una cuenta con ese email");
+            throw new IllegalArgumentException("An account with that email already exists");
         }
 
         User user = User.builder()
@@ -39,12 +39,17 @@ public class AuthService {
     }
 
     public AuthResponse login(LoginRequest request) {
+        User user = userRepository.findByEmail(request.email())
+                .orElseThrow(() -> new IllegalArgumentException("Invalid credentials"));
+
+        if (user.getPassword() == null) {
+            throw new IllegalArgumentException(
+                    "This account was created with Google Sign-In. Please use \"Continue with Google\" to log in.");
+        }
+
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.email(), request.password())
         );
-
-        User user = userRepository.findByEmail(request.email())
-                .orElseThrow(() -> new IllegalArgumentException("Credenciales inválidas"));
 
         String token = jwtUtil.generateToken(user.getEmail());
         return new AuthResponse(token, user.getEmail(), user.getName());
