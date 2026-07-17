@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 env:
-  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/notes-ai-backend
+  IMAGE_NAME: notes-ai-backend
 
 jobs:
   validate:
@@ -47,11 +47,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set lowercase image name
+        run: echo "FULL_IMAGE_NAME=ghcr.io/$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')/${{ env.IMAGE_NAME }}" >> $GITHUB_ENV
+
       - name: Build Docker image
-        run: docker build -t ${{ env.IMAGE_NAME }}:${{ github.sha }} .
+        run: docker build -t ${{ env.FULL_IMAGE_NAME }}:${{ github.sha }} .
 
       - name: Save image as artifact
-        run: docker save ${{ env.IMAGE_NAME }}:${{ github.sha }} -o backend-image.tar
+        run: docker save ${{ env.FULL_IMAGE_NAME }}:${{ github.sha }} -o backend-image.tar
 
       - uses: actions/upload-artifact@v4
         with:
@@ -75,6 +78,9 @@ jobs:
       - name: Load image
         run: docker load -i backend-image.tar
 
+      - name: Set lowercase image name
+        run: echo "FULL_IMAGE_NAME=ghcr.io/$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')/${{ env.IMAGE_NAME }}" >> $GITHUB_ENV
+
       - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
@@ -84,6 +90,6 @@ jobs:
 
       - name: Tag and push
         run: |
-          docker tag ${{ env.IMAGE_NAME }}:${{ github.sha }} ${{ env.IMAGE_NAME }}:latest
-          docker push ${{ env.IMAGE_NAME }}:${{ github.sha }}
-          docker push ${{ env.IMAGE_NAME }}:latest
+          docker tag ${{ env.FULL_IMAGE_NAME }}:${{ github.sha }} ${{ env.FULL_IMAGE_NAME }}:latest
+          docker push ${{ env.FULL_IMAGE_NAME }}:${{ github.sha }}
+          docker push ${{ env.FULL_IMAGE_NAME }}:latest
