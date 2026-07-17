@@ -55,7 +55,7 @@ class AuthServiceTest {
     }
 
     @Test
-    void register_deberiaCrearUsuarioYDevolverToken_cuandoEmailNoExiste() {
+    void register_shouldCreateUserAndReturnToken_whenEmailDoesNotExist() {
         when(userRepository.existsByEmail(registerRequest.email())).thenReturn(false);
         when(passwordEncoder.encode(registerRequest.password())).thenReturn("hashedPassword");
         when(userRepository.save(any(User.class))).thenReturn(savedUser);
@@ -70,18 +70,18 @@ class AuthServiceTest {
     }
 
     @Test
-    void register_deberiaLanzarExcepcion_cuandoEmailYaExiste() {
+    void register_shouldThrowException_whenEmailAlreadyExists() {
         when(userRepository.existsByEmail(registerRequest.email())).thenReturn(true);
 
         assertThatThrownBy(() -> authService.register(registerRequest))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Ya existe una cuenta");
+                .hasMessageContaining("already exists");
 
         verify(userRepository, never()).save(any(User.class));
     }
 
     @Test
-    void login_deberiaDevolverToken_cuandoCredencialesSonValidas() {
+    void login_shouldReturnToken_whenCredentialsAreValid() {
         LoginRequest loginRequest = new LoginRequest("jorge@example.com", "password123");
 
         when(userRepository.findByEmail("jorge@example.com")).thenReturn(Optional.of(savedUser));
@@ -94,18 +94,20 @@ class AuthServiceTest {
     }
 
     @Test
-    void login_deberiaLanzarExcepcion_cuandoUsuarioNoExisteTrasAutenticar() {
+    void login_shouldThrowException_whenUserNotFound() {
         LoginRequest loginRequest = new LoginRequest("noexiste@example.com", "password123");
 
         when(userRepository.findByEmail("noexiste@example.com")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> authService.login(loginRequest))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Credenciales inválidas");
+                .hasMessageContaining("Invalid credentials");
+
+        verify(authenticationManager, never()).authenticate(any());
     }
 
     @Test
-    void login_deberíaLanzarExcepción_cuandoLaCuentaSeaSoloDeGoogle() {
+    void login_shouldThrowException_whenAccountIsGoogleOnly() {
         LoginRequest loginRequest = new LoginRequest("jorge@example.com", "password123");
 
         User googleOnlyUser = User.builder()

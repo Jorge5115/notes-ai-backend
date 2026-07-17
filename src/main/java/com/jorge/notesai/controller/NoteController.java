@@ -30,7 +30,7 @@ public class NoteController {
 
     @PutMapping("/{id}")
     public ResponseEntity<NoteResponse> update(Authentication auth, @PathVariable Long id,
-                                                @Valid @RequestBody NoteRequest request) {
+                                               @Valid @RequestBody NoteRequest request) {
         return ResponseEntity.ok(noteService.update(auth.getName(), id, request));
     }
 
@@ -38,5 +38,10 @@ public class NoteController {
     public ResponseEntity<Void> delete(Authentication auth, @PathVariable Long id) {
         noteService.delete(auth.getName(), id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/summarize")
+    public ResponseEntity<NoteResponse> summarize(Authentication auth, @PathVariable Long id) {
+        return ResponseEntity.ok(noteService.summarize(auth.getName(), id));
     }
 }

@@ -30,6 +30,9 @@ class NoteServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private GeminiService geminiService;
+
     @InjectMocks
     private NoteService noteService;
 
@@ -39,23 +42,23 @@ class NoteServiceTest {
     @BeforeEach
     void setUp() {
         owner = User.builder().id(1L).email("jorge@example.com").name("Jorge").build();
-        note = Note.builder().id(10L).title("Compra").content("Leche y huevos").owner(owner).build();
+        note = Note.builder().id(10L).title("Shopping").content("Milk and eggs").owner(owner).build();
     }
 
     @Test
-    void getAllForUser_deberiaDevolverSoloLasNotasDelUsuario() {
+    void getAllForUser_shouldReturnOnlyTheUsersNotes() {
         when(userRepository.findByEmail("jorge@example.com")).thenReturn(Optional.of(owner));
         when(noteRepository.findByOwnerOrderByCreatedAtDesc(owner)).thenReturn(List.of(note));
 
         List<NoteResponse> result = noteService.getAllForUser("jorge@example.com");
 
         assertThat(result).hasSize(1);
-        assertThat(result.get(0).title()).isEqualTo("Compra");
+        assertThat(result.get(0).title()).isEqualTo("Shopping");
     }
 
     @Test
-    void create_deberiaGuardarNotaAsociadaAlUsuario() {
-        NoteRequest request = new NoteRequest("Nueva nota", "Contenido de prueba");
+    void create_shouldSaveNoteAssociatedWithTheUser() {
+        NoteRequest request = new NoteRequest("New note", "Test content");
 
         when(userRepository.findByEmail("jorge@example.com")).thenReturn(Optional.of(owner));
         when(noteRepository.save(any(Note.class))).thenReturn(note);
@@ -67,26 +70,39 @@ class NoteServiceTest {
     }
 
     @Test
-    void update_deberiaLanzarExcepcion_cuandoLaNotaNoPerteneceAlUsuario() {
-        NoteRequest request = new NoteRequest("Título editado", "Contenido editado");
+    void update_shouldThrowException_whenNoteDoesNotBelongToUser() {
+        NoteRequest request = new NoteRequest("Edited title", "Edited content");
 
         when(userRepository.findByEmail("jorge@example.com")).thenReturn(Optional.of(owner));
         when(noteRepository.findByIdAndOwner(99L, owner)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> noteService.update("jorge@example.com", 99L, request))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("no te pertenece");
+                .hasMessageContaining("does not belong to you");
 
         verify(noteRepository, never()).save(any(Note.class));
     }
 
     @Test
-    void delete_deberiaEliminarLaNota_cuandoPerteneceAlUsuario() {
+    void delete_shouldRemoveNote_whenItBelongsToUser() {
         when(userRepository.findByEmail("jorge@example.com")).thenReturn(Optional.of(owner));
         when(noteRepository.findByIdAndOwner(10L, owner)).thenReturn(Optional.of(note));
 
         noteService.delete("jorge@example.com", 10L);
 
         verify(noteRepository).delete(note);
+    }
+
+    @Test
+    void summarize_shouldSaveAiSummaryOnTheNote() {
+        when(userRepository.findByEmail("jorge@example.com")).thenReturn(Optional.of(owner));
+        when(noteRepository.findByIdAndOwner(10L, owner)).thenReturn(Optional.of(note));
+        when(geminiService.summarize(note.getContent())).thenReturn("Resumen de prueba");
+        when(noteRepository.save(any(Note.class))).thenReturn(note);
+
+        noteService.summarize("jorge@example.com", 10L);
+
+        verify(geminiService).summarize(note.getContent());
+        verify(noteRepository).save(argThat(n -> "Resumen de prueba".equals(n.getAiSummary())));
     }
 }

@@ -24,7 +24,7 @@ public class Note {
     private String title;
 
     @Lob
-    @Column(nullable = false)
+    @Column(columnDefinition = "LONGTEXT", nullable = false)
     private String content;
 
     @Builder.Default
@@ -32,8 +32,9 @@ public class Note {
 
     private LocalDateTime updatedAt;
 
-    // Reservado para la Fase 5 (LLM): resumen generado por IA
+    // Fase 5 (LLM): resumen generado por IA
     @Lob
+    @Column(columnDefinition = "LONGTEXT")
     private String aiSummary;
 
     @ManyToOne(fetch = FetchType.LAZY)

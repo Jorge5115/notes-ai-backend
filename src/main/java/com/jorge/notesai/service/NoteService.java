@@ -18,6 +18,7 @@ public class NoteService {
 
     private final NoteRepository noteRepository;
     private final UserRepository userRepository;
+    private final GeminiService geminiService;
 
     public List<NoteResponse> getAllForUser(String email) {
         User owner = getUser(email);
@@ -56,14 +57,24 @@ public class NoteService {
         noteRepository.delete(note);
     }
 
+    public NoteResponse summarize(String email, Long noteId) {
+        User owner = getUser(email);
+        Note note = getOwnedNote(noteId, owner);
+
+        String summary = geminiService.summarize(note.getContent());
+        note.setAiSummary(summary);
+
+        return toResponse(noteRepository.save(note));
+    }
+
     private User getUser(String email) {
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
     }
 
     private Note getOwnedNote(Long noteId, User owner) {
         return noteRepository.findByIdAndOwner(noteId, owner)
-                .orElseThrow(() -> new IllegalArgumentException("Nota no encontrada o no te pertenece"));
+                .orElseThrow(() -> new IllegalArgumentException("Note not found or does not belong to you"));
     }
 
     private NoteResponse toResponse(Note note) {
