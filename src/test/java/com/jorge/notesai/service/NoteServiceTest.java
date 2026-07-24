@@ -31,7 +31,7 @@ class NoteServiceTest {
     private UserRepository userRepository;
 
     @Mock
-    private GeminiService geminiService;
+    private GroqService groqService;
 
     @InjectMocks
     private NoteService noteService;
@@ -97,12 +97,12 @@ class NoteServiceTest {
     void summarize_shouldSaveAiSummaryOnTheNote() {
         when(userRepository.findByEmail("jorge@example.com")).thenReturn(Optional.of(owner));
         when(noteRepository.findByIdAndOwner(10L, owner)).thenReturn(Optional.of(note));
-        when(geminiService.summarize(note.getContent())).thenReturn("Resumen de prueba");
+        when(groqService.summarize(note.getContent())).thenReturn("Resumen de prueba");
         when(noteRepository.save(any(Note.class))).thenReturn(note);
 
         noteService.summarize("jorge@example.com", 10L);
 
-        verify(geminiService).summarize(note.getContent());
+        verify(groqService).summarize(note.getContent());
         verify(noteRepository).save(argThat(n -> "Resumen de prueba".equals(n.getAiSummary())));
     }
 }

@@ -18,7 +18,7 @@ public class NoteService {
 
     private final NoteRepository noteRepository;
     private final UserRepository userRepository;
-    private final GeminiService geminiService;
+    private final GroqService groqService;
 
     public List<NoteResponse> getAllForUser(String email) {
         User owner = getUser(email);
@@ -61,7 +61,7 @@ public class NoteService {
         User owner = getUser(email);
         Note note = getOwnedNote(noteId, owner);
 
-        String summary = geminiService.summarize(note.getContent());
+        String summary = groqService.summarize(note.getContent());
         note.setAiSummary(summary);
 
         return toResponse(noteRepository.save(note));

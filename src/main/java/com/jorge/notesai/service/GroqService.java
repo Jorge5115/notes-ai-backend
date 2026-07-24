@@ -3,25 +3,27 @@ package com.jorge.notesai.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
+import java.util.List;
 import java.util.Map;
 
 @Service
-public class GeminiService {
+public class GroqService {
 
     private final RestClient restClient;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    @Value("${gemini.api-key}")
+    @Value("${groq.api-key}")
     private String apiKey;
 
-    @Value("${gemini.model}")
+    @Value("${groq.model}")
     private String model;
 
-    public GeminiService() {
-        this.restClient = RestClient.create("https://generativelanguage.googleapis.com");
+    public GroqService() {
+        this.restClient = RestClient.create("https://api.groq.com");
     }
 
     private boolean isMockMode() {
@@ -42,19 +44,18 @@ public class GeminiService {
                 + "sin añadir comentarios ni introducciones, solo el resumen directo:\n\n" + content;
 
         Map<String, Object> requestBody = Map.of(
-                "contents", new Object[]{
-                        Map.of("parts", new Object[]{Map.of("text", prompt)})
-                },
-                "generationConfig", Map.of(
-                        "temperature", 0.2,
-                        "maxOutputTokens", 200
-                )
+                "model", model,
+                "messages", List.of(
+                        Map.of("role", "user", "content", prompt)
+                ),
+                "temperature", 0.2,
+                "max_tokens", 200
         );
 
         String responseJson = restClient.post()
-                .uri("/v1beta/models/{model}:generateContent", model)
-                .header("x-goog-api-key", apiKey)
-                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .uri("/openai/v1/chat/completions")
+                .header("Authorization", "Bearer " + apiKey)
+                .contentType(MediaType.APPLICATION_JSON)
                 .body(requestBody)
                 .retrieve()
                 .body(String.class);
@@ -65,9 +66,9 @@ public class GeminiService {
     private String extractText(String responseJson) {
         try {
             JsonNode root = objectMapper.readTree(responseJson);
-            return root.path("candidates").get(0)
-                    .path("content").path("parts").get(0)
-                    .path("text").asText().trim();
+            return root.path("choices").get(0)
+                    .path("message").path("content")
+                    .asText().trim();
         } catch (Exception e) {
             return "No se pudo generar el resumen (respuesta inesperada de la IA).";
         }
